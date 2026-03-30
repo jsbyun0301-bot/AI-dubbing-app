@@ -197,8 +197,8 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
     }
 });
 
-// Vercel 환경이 아닐 때만 자체 서버 구동 (Vercel에서는 서버리스로 구동됨)
-if (!process.env.VERCEL) {
+// Vercel 환경이 아닐 때만 자체 서버 구동 (Vercel에서는 모듈로 로드되므로 require.main !== module이 됨)
+if (require.main === module) {
     app.listen(port, () => {
         console.log(`AI Dubbing App Server running at http://localhost:${port}`);
     });
