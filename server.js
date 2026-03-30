@@ -37,8 +37,15 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use(express.static('public'));
+// Vercel에서 public 폴더를 안전하게 찾을 수 있도록 절대 경로(__dirname) 지정
+const publicDir = path.join(__dirname, 'public');
+app.use(express.static(publicDir));
 app.use(express.json());
+
+// 루트 접속 시 index.html 띄우기 (Cannot GET / 방지)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+});
 
 app.get('/api/get-keys', (req, res) => {
     try {
