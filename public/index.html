@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 영상 더빙 스튜디오</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar / Settings -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">🎙️</div>
+                <h1>AI Dubbing Studio</h1>
+            </div>
+
+            <!-- Settings Panel removed as per user request (API keys handled via server / Fallback Gemimi) -->
+
+            <div class="steps-indicator">
+                <div class="step disabled" id="step-1-nav" style="opacity: 0.3;">
+                    <div class="step-num">1</div>
+                    <div class="step-desc">
+                        <h4>영상 분석 (생략)</h4>
+                        <p>비용 문제로 건너뜀</p>
+                    </div>
+                </div>
+                <div class="step active" id="step-2-nav">
+                    <div class="step-num">2</div>
+                    <div class="step-desc">
+                        <h4>스크립트 추출</h4>
+                        <p>STT 기반 변환</p>
+                    </div>
+                </div>
+                <div class="step" id="step-3-nav" style="opacity: 0.5;">
+                    <div class="step-num">3</div>
+                    <div class="step-desc">
+                        <h4>다국어 번역</h4>
+                        <p id="translation-step-subtitle">Gemini AI 번역</p>
+                    </div>
+                </div>
+                <div class="step" id="step-4-nav" style="opacity: 0.5;">
+                    <div class="step-num">4</div>
+                    <div class="step-desc">
+                        <h4>AI 더빙 생성</h4>
+                        <p>음성 합성 및 병합</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-nav">
+                <h2 id="main-header">2단계: 영상 업로드 및 STT 기반 스크립트 도출</h2>
+            </header>
+
+            <div class="content-body" id="step-content">
+                <div class="studio-wrapper" id="studio-wrapper">
+                    <!-- Left: Media/Video Section -->
+                    <div class="upload-section" id="media-col">
+                        <div class="drop-zone" id="drop-zone">
+                            <div class="drop-zone-content">
+                                <div class="upload-icon">📁</div>
+                                <h3>비디오 파일을 끌어다 놓으세요</h3>
+                                <p>또는 클릭하여 파일을 선택하세요</p>
+                                <span class="file-hint">지원: mp4, webm, mov, mp3, wav</span>
+                            </div>
+                            <input type="file" id="video-upload" accept="video/*,audio/*" hidden>
+                        </div>
+
+                        <div class="video-preview-container hidden" id="video-preview-container">
+                            <video id="video-preview" controls></video>
+                            <div id="segments-timeline" class="segments-timeline">
+                                <!-- Visual segments will be drawn here -->
+                            </div>
+                            <div class="video-actions">
+                                <button class="btn btn-secondary" id="btn-remove-video">다른 영상 선택</button>
+                                <button class="btn btn-primary" id="btn-extract-script">스크립트 추출 시작 📝</button>
+                            </div>
+                        </div>
+
+                        <!-- Moved Result Container: Compact Layout -->
+                        <div class="audio-result-container hidden" id="audio-result-container" style="margin-top: 1rem; text-align: left; padding: 1.25rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border);">
+                            <h4 style="margin-bottom: 0.75rem; color: var(--accent-light); text-align:center; font-size: 0.9rem;">🎉 오디오 합성 및 결과 확인</h4>
+
+                            <div style="margin-bottom: 0.75rem; text-align: center; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" id="btn-play-synced-video" style="background-color: var(--accent-light); color: var(--bg-main); flex: 1; font-weight: bold; border: none; min-width: 120px; padding: 0.5rem; font-size: 0.85rem;">🎬 자동 재생</button>
+                                <button class="btn btn-secondary" id="btn-download-srt" style="flex: 1; font-weight: bold; border: 1px solid var(--border); min-width: 120px; padding: 0.5rem; font-size: 0.85rem;">📝 SRT 자막</button>
+                                <button class="btn btn-primary" id="btn-download-video" style="flex: 1; font-weight: bold; border: none; min-width: 120px; padding: 0.5rem; font-size: 0.85rem;">💾 MP4 병합</button>
+                            </div>
+                            <div id="playlist-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                                <!-- JS will inject audio elements here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Editor/Results Section -->
+                    <div class="analysis-results hidden" id="analysis-results">
+                        <div class="editor-header">
+                            <h3>추출된 스크립트 <span class="badge">ElevenLabs Scribe v2</span></h3>
+                        </div>
+                        
+                        <div class="analysis-details">
+                            <!-- Legacy Textarea Hidden, will use dialogue-editor instead -->
+                            <textarea id="result-script" readonly class="hidden"></textarea>
+                            <div id="dialogue-editor" class="dialogue-grid">
+                                <!-- JS will inject cards here -->
+                                <div class="empty-state">
+                                    <span>📝</span>
+                                    <p>출력된 스크립트가 없습니다. 추출을 시작해 주세요.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="translation-section hidden" id="translation-section"
+                            style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+                            <h3>스크립트 번역 <span class="badge" id="translation-badge-span">Gemini 2.5 Flash</span></h3>
+
+                            <div class="language-selector"
+                                style="margin: 1.5rem 0; display: flex; gap: 1rem; align-items: center;">
+                                <label for="target-language" style="color: var(--text-muted);">목표 언어:</label>
+                                <select id="target-language" class="premium-input" style="width: 200px;">
+                                    <option value="Korean">한국어 (Korean)</option>
+                                    <option value="English">영어 (English)</option>
+                                    <option value="Japanese">일본어 (Japanese)</option>
+                                    <option value="Spanish">스페인어 (Spanish)</option>
+                                    <option value="French">프랑스어 (French)</option>
+                                </select>
+                                <button class="btn btn-primary" id="btn-translate-script">번역 시작 🌐</button>
+                            </div>
+
+                            <div class="analysis-details">
+                                <!-- Legacy translated-script textarea hidden -->
+                                <textarea id="translated-script" readonly class="hidden"></textarea>
+                            </div>
+
+                            <div class="step-actions" style="margin-top: 1.5rem;">
+                                <button class="btn btn-primary" id="btn-next-step-4" disabled>4단계: AI 더빙 생성 ➔</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: AI Dubbing Section -->
+                        <div class="dubbing-section hidden" id="dubbing-section"
+                            style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+                            <h3>AI 더빙 생성 <span class="badge">ElevenLabs TTS</span></h3>
+
+                        
+                        <div id="dynamic-voice-selectors" style="margin: 1.5rem 0; display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- JS will inject speaker selectors here -->
+                        </div>
+                        <div style="margin-top: 1.5rem; text-align: right;">
+                            <button class="btn btn-primary" id="btn-generate-dubbing" style="width: 100%;">각 화자별 오디오 합성 및 통합 🎤</button>
+                        </div>
+
+                        <div class="audio-result-container hidden" id="audio-result-container-legacy-placeholder">
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div class="loading-overlay hidden" id="loading-overlay">
+                        <div class="spinner"></div>
+                        <p id="loading-text">영상을 분석하고 있습니다...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
