@@ -9,19 +9,18 @@ const port = 3000;
 
 const os = require('os');
 
-// Setup temp directory (Vercel에서는 읽기 전용 에러 방지를 위해 /tmp 사용)
+// Setup temp directory (Vercel에서는 읽기 전용/경로 에러 방지를 위해 /tmp 사용)
 let tempDir = path.join(__dirname, 'temp');
 try {
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
 } catch (err) {
-    // 만약 읽기 전용(EROFS) 에러가 나면 서버리스 환경이므로 os.tmpdir() 사용
-    if (err.code === 'EROFS') {
-        tempDir = path.join(os.tmpdir(), 'ai-dubbing');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    } else {
-        throw err;
+    // 로컬 권한 문제, 읽기 전용(EROFS), 또는 Vercel 특유의 경로 에러(ENOENT) 등
+    // 어떤 이유로든 로컬 temp 폴더 생성을 실패하면 무조건 os.tmpdir()로 우회합니다.
+    tempDir = path.join(os.tmpdir(), 'ai-dubbing');
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
     }
 }
 
