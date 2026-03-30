@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     filename: (req, file, cb) => {
         // preserve extension
         let ext = path.extname(file.originalname);
-        if(!ext && file.mimetype === 'audio/mpeg') ext = '.mp3';
+        if (!ext && file.mimetype === 'audio/mpeg') ext = '.mp3';
         cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + ext);
     }
 });
@@ -59,7 +59,7 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
 
         let videoFile = null;
         const audioFiles = {};
-        
+
         req.files.forEach(file => {
             if (file.fieldname === 'video') {
                 videoFile = file;
@@ -81,7 +81,7 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
             subtitlePath = path.join(tempDir, `subs_${Date.now()}.srt`);
             fs.writeFileSync(subtitlePath, req.body.subtitles);
         }
-        
+
         let command = ffmpeg(videoFile.path);
 
         // input all audio files
@@ -94,12 +94,12 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
 
         let filterComplex = '';
         const mixInputs = [];
-        
+
         if (config.length === 0) {
             // No audio, just strip the audio
             command = command
                 .outputOptions([
-                    '-map 0:v:0', 
+                    '-map 0:v:0',
                     '-c:v copy'
                 ]);
         } else {
@@ -108,10 +108,10 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
                 const inputIndex = idx + 1; // 0 is video, 1 is first audio
                 const af = audioFiles[item.audioIndex];
                 if (!af) return;
-                
+
                 const delayMs = Math.max(0, Math.floor(item.startTime * 1000));
                 let rate = item.playbackRate || 1.0;
-                
+
                 let filter = `[${inputIndex}:a]`;
                 if (rate !== 1.0) {
                     filter += `atempo=${rate},`;
@@ -120,7 +120,7 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
                 filterComplex += filter;
                 mixInputs.push(`[a${inputIndex}]`);
             });
-            
+
             // Mix all delayed and sped-up audios, then RESET timestamps to prevent overflow corruption
             filterComplex += `${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=longest:dropout_transition=0,asetpts=PTS-STARTPTS[aout]`;
 
@@ -157,7 +157,7 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
                     const filesToClean = [videoFile.path, outputPath, ...Object.values(audioFiles).map(f => f.path)];
                     if (subtitlePath) filesToClean.push(subtitlePath);
                     filesToClean.forEach(f => {
-                        if (fs.existsSync(f)) fs.unlink(f, () => {});
+                        if (fs.existsSync(f)) fs.unlink(f, () => { });
                     });
                 });
             })
@@ -171,7 +171,7 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
                 const filesToClean = [videoFile.path, outputPath, ...Object.values(audioFiles).map(f => f.path)];
                 if (subtitlePath) filesToClean.push(subtitlePath);
                 filesToClean.forEach(f => {
-                    if (fs.existsSync(f)) fs.unlink(f, () => {});
+                    if (fs.existsSync(f)) fs.unlink(f, () => { });
                 });
             })
             .save(outputPath); // CALL SAVE LAST
@@ -185,3 +185,6 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
 app.listen(port, () => {
     console.log(`AI Dubbing App Server running at http://localhost:${port}`);
 });
+
+// Vercel Serverless 배포를 위한 익스포트
+module.exports = app;
