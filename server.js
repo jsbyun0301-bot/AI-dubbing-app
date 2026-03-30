@@ -7,10 +7,10 @@ const ffmpeg = require('fluent-ffmpeg');
 const app = express();
 const port = 3000;
 
-// Setup temp directory
-const tempDir = path.join(__dirname, 'temp');
+// Setup temp directory (use /tmp on Vercel as the file system is read-only)
+const tempDir = process.env.VERCEL ? '/tmp/ai-dubbing' : path.join(__dirname, 'temp');
 if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir);
+    fs.mkdirSync(tempDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
@@ -31,12 +31,15 @@ app.use(express.json());
 
 app.get('/api/get-keys', (req, res) => {
     try {
+        // First check Vercel Environment variables
+        let elevenKey = process.env.ELEVENLABS_API_KEY || '';
+        
+        // If not found, check local file
         const keyPath = path.join(__dirname, 'elevenlabs_api_key.txt');
-        let elevenKey = '';
-        if (fs.existsSync(keyPath)) {
+        if (!elevenKey && fs.existsSync(keyPath)) {
             elevenKey = fs.readFileSync(keyPath, 'utf8').trim();
-        } else {
-            console.warn('elevenlabs_api_key.txt not found. Checking elevenlabs_api_key...');
+        } else if (!elevenKey) {
+            console.warn('elevenlabs_api_key.txt not found...');
             const fallbackPath = path.join(__dirname, 'elevenlabs_api_key');
             if (fs.existsSync(fallbackPath)) {
                 elevenKey = fs.readFileSync(fallbackPath, 'utf8').trim();
@@ -182,9 +185,12 @@ app.post('/api/merge-video', upload.any(), (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`AI Dubbing App Server running at http://localhost:${port}`);
-});
+// Vercel 환경이 아닐 때만 자체 서버 구동 (Vercel에서는 서버리스로 구동됨)
+if (!process.env.VERCEL) {
+    app.listen(port, () => {
+        console.log(`AI Dubbing App Server running at http://localhost:${port}`);
+    });
+}
 
 // Vercel Serverless 배포를 위한 익스포트
 module.exports = app;
