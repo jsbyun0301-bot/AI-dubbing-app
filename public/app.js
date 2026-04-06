@@ -34,8 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch API keys from server on load
     fetch('/api/get-keys')
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error('Response not ok: ' + res.status);
+            return res.json();
+        })
         .then(data => {
+            console.log("Keys loaded:", data.elevenlabs ? "OK" : "EMPTY");
             if (data.elevenlabs) window.elevenKey = data.elevenlabs;
         })
         .catch(err => console.error("Failed to fetch keys:", err));
@@ -129,10 +133,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnExtractScript.addEventListener('click', async () => {
+        // If key not loaded yet, try fetching again
+        if (!window.elevenKey) {
+            try {
+                const res = await fetch('/api/get-keys');
+                const data = await res.json();
+                if (data.elevenlabs) window.elevenKey = data.elevenlabs;
+            } catch (e) {
+                console.error("Retry fetch keys failed:", e);
+            }
+        }
         const elevenKey = window.elevenKey;
 
         if (!elevenKey) {
-            alert('서버에서 ElevenLabs API 키를 불러올 수 없습니다. 파일(elevenlabs_api_key.txt)을 확인하세요.');
+            alert('서버에서 ElevenLabs API 키를 불러올 수 없습니다. 환경변수(ELEVENLABS_API_KEY)를 확인하세요.');
             return;
         }
 
@@ -753,6 +767,16 @@ ${text}
 
 
     btnGenerateDubbing.addEventListener('click', async () => {
+        // If key not loaded yet, try fetching again
+        if (!window.elevenKey) {
+            try {
+                const res = await fetch('/api/get-keys');
+                const data = await res.json();
+                if (data.elevenlabs) window.elevenKey = data.elevenlabs;
+            } catch (e) {
+                console.error("Retry fetch keys failed:", e);
+            }
+        }
         const elevenKey = window.elevenKey;
 
         if (!elevenKey) {
