@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const translationStepSubtitle = document.getElementById('translation-step-subtitle');
     const translationBadgeSpan = document.getElementById('translation-badge-span');
 
-    const GEMINI_API_KEY_FALLBACK = "AIzaSyCy1QMsbb1FaKhL6erd7oT0vGNh_tQk3Dc";
+    window.geminiKey = "";
     window.elevenKey = "";
 
     // Fetch API keys from server on load
@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             console.log("Keys loaded:", data.elevenlabs ? "OK" : "EMPTY");
             if (data.elevenlabs) window.elevenKey = data.elevenlabs;
+            if (data.gemini) window.geminiKey = data.gemini;
         })
         .catch(err => console.error("Failed to fetch keys:", err));
 
@@ -311,7 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.classList.remove('hidden');
 
         try {
-            await translateWithGemini(scriptToTranslate, targetLanguage, GEMINI_API_KEY_FALLBACK);
+            if (!window.geminiKey) {
+                throw new Error('Gemini API 키가 설정되지 않았습니다 (서버 GEMINI_API_KEY 환경변수 확인).');
+            }
+            await translateWithGemini(scriptToTranslate, targetLanguage, window.geminiKey);
         } catch (error) {
             console.error('Translation Error:', error);
             alert(`번역 중 오류가 발생했습니다: ${error.message}`);

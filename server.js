@@ -63,7 +63,9 @@ app.get('/api/get-keys', (req, res) => {
                 elevenKey = fs.readFileSync(fallbackPath, 'utf8').trim();
             }
         }
-        res.json({ elevenlabs: elevenKey });
+        // Gemini 키도 환경변수에서 (하드코딩 제거)
+        const geminiKey = process.env.GEMINI_API_KEY || '';
+        res.json({ elevenlabs: elevenKey, gemini: geminiKey });
     } catch (err) {
         console.error('Error reading key file:', err);
         res.status(500).json({ error: 'Failed to read keys' });
