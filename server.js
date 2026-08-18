@@ -38,7 +38,8 @@ const storage = multer.diskStorage({
     }
 });
 // 공개 배포 환경에서 과도한 사용을 막기 위한 상한
-const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 25);
+// Vercel 서버리스 요청 본문 상한(4.5MB)보다 작게 잡습니다.
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 4);
 const MAX_TTS_CHARS = Number(process.env.MAX_TTS_CHARS || 600);
 const MAX_PROMPT_CHARS = Number(process.env.MAX_PROMPT_CHARS || 12000);
 const RATE_LIMIT_PER_HOUR = Number(process.env.RATE_LIMIT_PER_HOUR || 30);

@@ -141,10 +141,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ── 오디오 추출 ────────────────────────────────────────────
+    // 서버리스 요청 본문 상한(4.5MB) 때문에 영상을 그대로 올릴 수 없어,
+    // 브라우저에서 오디오만 뽑아 16kHz 모노 WAV로 변환한 뒤 업로드합니다.
+    const STT_SAMPLE_RATE = 16000;
+    const STT_MAX_BYTES = 4 * 1024 * 1024;
+
+    function encodeWav(samples, sampleRate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+        const writeStr = (offset, str) => {
+            for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+        };
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeStr(36, 'data');
+        view.setUint32(40, samples.length * 2, true);
+        let off = 44;
+        for (let i = 0; i < samples.length; i++, off += 2) {
+            const v = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(off, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+        }
+        return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    async function extractAudioForStt(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let decoded;
+        try {
+            decoded = await decodeCtx.decodeAudioData(arrayBuffer);
+        } finally {
+            decodeCtx.close();
+        }
+        if (!decoded || decoded.length === 0) {
+            throw new Error('오디오 트랙을 찾을 수 없습니다.');
+        }
+
+        // 16kHz 모노로 리샘플링
+        const frames = Math.ceil(decoded.duration * STT_SAMPLE_RATE);
+        const offline = new OfflineAudioContext(1, frames, STT_SAMPLE_RATE);
+        const src = offline.createBufferSource();
+        src.buffer = decoded;
+        src.connect(offline.destination);
+        src.start();
+        const rendered = await offline.startRendering();
+
+        const wav = encodeWav(rendered.getChannelData(0), STT_SAMPLE_RATE);
+        if (wav.size > STT_MAX_BYTES) {
+            const limitMin = Math.floor(STT_MAX_BYTES / (STT_SAMPLE_RATE * 2) / 60);
+            throw new Error(
+                `영상이 너무 깁니다. 약 ${limitMin}분 이내로 잘라서 올려주세요. ` +
+                `(현재 ${Math.round(decoded.duration)}초)`
+            );
+        }
+        return wav;
+    }
+
     async function extractScriptWithElevenLabs(file) {
-        // Create FormData to send the file
+        loadingText.textContent = '영상에서 오디오를 추출하고 있습니다...';
+        const audioBlob = await extractAudioForStt(file);
+
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', audioBlob, 'audio.wav');
         formData.append('model_id', 'scribe_v1'); // Using scribe_v1 for diarization
         formData.append('diarize', 'true'); // Enable speaker diarization
         formData.append('tag_audio_events', 'false');
@@ -156,7 +224,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!response.ok) {
             const errResult = await response.json().catch(() => ({}));
-            throw new Error(errResult.detail?.message || `HTTP error! status: ${response.status}`);
+            if (response.status === 413) {
+                throw new Error('오디오 용량이 서버 한도를 넘었습니다. 더 짧은 영상으로 시도해 주세요.');
+            }
+            throw new Error(errResult.error || errResult.detail?.message || `요청 실패 (status: ${response.status})`);
         }
 
         const data = await response.json();
@@ -779,7 +850,10 @@ ${text}
 
         if (!response.ok) {
             const errResult = await response.json().catch(() => ({}));
-            throw new Error(errResult.detail?.message || `HTTP error! status: ${response.status}`);
+            if (response.status === 413) {
+                throw new Error('오디오 용량이 서버 한도를 넘었습니다. 더 짧은 영상으로 시도해 주세요.');
+            }
+            throw new Error(errResult.error || errResult.detail?.message || `요청 실패 (status: ${response.status})`);
         }
 
         const blob = await response.blob();
