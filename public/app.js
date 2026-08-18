@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update UI
         videoPreview.src = URL.createObjectURL(file);
-        btnNextStep3.disabled = true;
+        if (btnNextStep3) btnNextStep3.disabled = true;
         window.dialogues = [];
         goToStep(1);
     }
