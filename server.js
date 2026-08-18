@@ -105,6 +105,28 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// 계정에서 사용 가능한 보이스 목록
+app.get('/api/voices', async (req, res) => {
+    if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;
+    try {
+        const r = await fetch('https://api.elevenlabs.io/v1/voices', {
+            headers: { 'xi-api-key': ELEVEN_KEY }
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return res.status(r.status).json(data);
+        const voices = (data.voices || []).map((v) => ({
+            voice_id: v.voice_id,
+            name: v.name,
+            category: v.category,
+            labels: v.labels || {}
+        }));
+        res.json({ voices });
+    } catch (err) {
+        console.error('Voices error:', err);
+        res.status(500).json({ error: '보이스 목록을 불러오지 못했습니다.' });
+    }
+});
+
 // STT — 음성/영상에서 스크립트 추출
 app.post('/api/stt', rateLimit, upload.single('file'), async (req, res) => {
     if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;

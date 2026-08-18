@@ -466,12 +466,16 @@ ${text}
         try {
             // Find voice mapping for this speaker
             const selects = document.querySelectorAll('.speaker-voice-select');
-            let voiceId = VOICE_IDS['Rachel'];
+            let voiceId = availableVoices[0]?.voice_id;
             selects.forEach(s => {
-                if (s.dataset.speaker === dlg.speaker) {
-                    voiceId = VOICE_IDS[s.value] || voiceId;
+                if (s.dataset.speaker === dlg.speaker && s.value) {
+                    voiceId = s.value;
                 }
             });
+            if (!voiceId) {
+                alert('사용 가능한 보이스가 없습니다. ElevenLabs 계정의 보이스를 확인해 주세요.');
+                return;
+            }
 
             const textForTTS = dlg.translatedText.replace(/\(.*?\)/g, '').trim();
             const { audioUrl, blob } = await generateSpeechWithElevenLabs(textForTTS, voiceId);
@@ -618,22 +622,38 @@ ${text}
     const audioResultContainer = document.getElementById('audio-result-container');
     const playlistContainer = document.getElementById('playlist-container');
 
-    const VOICE_OPTIONS_HTML = `
-        <option value="Rachel">Rachel (여성/미국/차분한)</option>
-        <option value="Domi">Domi (여성/미국/강인한)</option>
-        <option value="Adam">Adam (남성/미국/나레이션)</option>
-        <option value="Antoni">Antoni (남성/미국/청년)</option>
-        <option value="Arnold">Arnold (남성/미국/깊은)</option>
-        <option value="Alice">Alice (여성/영국/신뢰감있는)</option>
-        <option value="Brian">Brian (남성/미국/중저음)</option>
-        <option value="Daniel">Daniel (남성/영국/뉴스)</option>
-    `;
+    // 계정에서 실제 사용 가능한 보이스를 서버에서 불러옵니다.
+    // (무료 등급은 라이브러리 보이스를 API로 쓸 수 없어, 계정 보유 목록을 기준으로 합니다)
+    let availableVoices = [];
 
+    async function loadVoices() {
+        if (availableVoices.length > 0) return availableVoices;
+        try {
+            const res = await fetch('/api/voices');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '보이스 목록 오류');
+            availableVoices = data.voices || [];
+        } catch (err) {
+            console.error('보이스 목록을 불러오지 못했습니다:', err);
+            availableVoices = [];
+        }
+        return availableVoices;
+    }
 
+    function buildVoiceOptions() {
+        if (availableVoices.length === 0) {
+            return '<option value="">사용 가능한 보이스가 없습니다</option>';
+        }
+        return availableVoices.map((v) => {
+            const desc = [v.labels?.gender, v.labels?.accent, v.labels?.description]
+                .filter(Boolean).join('/');
+            return `<option value="${v.voice_id}">${v.name}${desc ? ` (${desc})` : ''}</option>`;
+        }).join('');
+    }
 
-
-    function generateVoiceSelectors() {
+    async function generateVoiceSelectors() {
         if (!window.dialogues || window.dialogues.length === 0) return;
+        await loadVoices();
         
         const speakers = new Set();
         window.dialogues.forEach(d => speakers.add(d.speaker));
@@ -644,7 +664,7 @@ ${text}
                 <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
                     <span style="font-weight: bold; color: var(--primary); width: 100px;">${speaker}</span>
                     <select class="premium-input speaker-voice-select" data-speaker="${speaker}" style="flex: 1;">
-                        ${VOICE_OPTIONS_HTML}
+                        ${buildVoiceOptions()}
                     </select>
                 </div>
             `;
@@ -668,17 +688,6 @@ ${text}
         generateVoiceSelectors();
     });
 
-    // Voice mapping for ElevenLabs guaranteed 'Pre-made' voices (Free Tier safe)
-    const VOICE_IDS = {
-        'Rachel': '21m00Tcm4TlvDq8ikWAM',
-        'Domi': 'AZn7nNTGLFEHrlPLW9u5',
-        'Adam': 'pNInz6obpgDQGcFmaJgB',
-        'Antoni': 'ErXwobaYiN019PkySvjV',
-        'Arnold': 'VR6AewLTigWG4xSOukaG',
-        'Alice': 'Xb7hH8MSUJpSbSDYk0k2',
-        'Brian': 'nPczCjzI2devNBz1zQrb',
-        'Daniel': 'onwK4e9ZLuTAKqWW03F9'
-    };
 
 
 
@@ -694,7 +703,7 @@ ${text}
         const selects = document.querySelectorAll('.speaker-voice-select');
         selects.forEach(select => {
             const speaker = select.dataset.speaker;
-            voiceMapping[speaker] = VOICE_IDS[select.value] || VOICE_IDS['Rachel'];
+            voiceMapping[speaker] = select.value || availableVoices[0]?.voice_id;
         });
 
         // Use structured dialogues for TTS
