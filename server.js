@@ -37,7 +37,33 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + ext);
     }
 });
-const upload = multer({ storage: storage });
+// 공개 배포 환경에서 과도한 사용을 막기 위한 상한
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 25);
+const MAX_TTS_CHARS = Number(process.env.MAX_TTS_CHARS || 600);
+const MAX_PROMPT_CHARS = Number(process.env.MAX_PROMPT_CHARS || 12000);
+const RATE_LIMIT_PER_HOUR = Number(process.env.RATE_LIMIT_PER_HOUR || 30);
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024 }
+});
+
+// 간단한 IP 기준 호출 제한 (서버리스에서는 인스턴스 단위로만 동작)
+const hits = new Map();
+function rateLimit(req, res, next) {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || 'unknown';
+    const now = Date.now();
+    const windowMs = 60 * 60 * 1000;
+    const list = (hits.get(ip) || []).filter((t) => now - t < windowMs);
+    if (list.length >= RATE_LIMIT_PER_HOUR) {
+        return res.status(429).json({
+            error: `시간당 요청 한도(${RATE_LIMIT_PER_HOUR}회)를 초과했습니다. 잠시 후 다시 시도해 주세요.`
+        });
+    }
+    list.push(now);
+    hits.set(ip, list);
+    next();
+}
 
 // Vercel에서 public 폴더를 안전하게 찾을 수 있도록 절대 경로(__dirname) 지정
 const publicDir = path.join(__dirname, 'public');
@@ -65,7 +91,7 @@ function requireKey(res, key, name) {
 }
 
 // STT — 음성/영상에서 스크립트 추출
-app.post('/api/stt', upload.single('file'), async (req, res) => {
+app.post('/api/stt', rateLimit, upload.single('file'), async (req, res) => {
     if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;
     if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
     try {
@@ -92,10 +118,13 @@ app.post('/api/stt', upload.single('file'), async (req, res) => {
 });
 
 // 번역 — Gemini
-app.post('/api/translate', async (req, res) => {
+app.post('/api/translate', rateLimit, async (req, res) => {
     if (!requireKey(res, GEMINI_KEY, 'GEMINI_API_KEY')) return;
     const { prompt, model = 'gemini-2.5-flash', temperature = 0.3 } = req.body || {};
     if (!prompt) return res.status(400).json({ error: 'prompt가 없습니다.' });
+    if (prompt.length > MAX_PROMPT_CHARS) {
+        return res.status(413).json({ error: `번역 요청이 너무 깁니다. (최대 ${MAX_PROMPT_CHARS}자)` });
+    }
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
         const r = await fetch(url, {
@@ -116,10 +145,13 @@ app.post('/api/translate', async (req, res) => {
 });
 
 // TTS — 음성 합성
-app.post('/api/tts', async (req, res) => {
+app.post('/api/tts', rateLimit, async (req, res) => {
     if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;
     const { text, voiceId } = req.body || {};
     if (!text || !voiceId) return res.status(400).json({ error: 'text 또는 voiceId가 없습니다.' });
+    if (text.length > MAX_TTS_CHARS) {
+        return res.status(413).json({ error: `음성으로 만들 문장이 너무 깁니다. (최대 ${MAX_TTS_CHARS}자)` });
+    }
     try {
         const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
             method: 'POST',
@@ -144,6 +176,14 @@ app.post('/api/tts', async (req, res) => {
         console.error('TTS error:', err);
         res.status(500).json({ error: '음성 합성에 실패했습니다.' });
     }
+});
+
+// 업로드 용량 초과 처리
+app.use((err, req, res, next) => {
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: `파일이 너무 큽니다. (최대 ${MAX_UPLOAD_MB}MB)` });
+    }
+    next(err);
 });
 
 app.post('/api/merge-video', upload.any(), (req, res) => {
