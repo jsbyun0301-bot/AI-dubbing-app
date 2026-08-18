@@ -38,7 +38,9 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg-dark);
     color: var(--text-main);
     line-height: 1.5;
@@ -78,11 +80,12 @@ body {
 }
 
 .logo-icon {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
 
 .logo h1 {
-    font-size: 1.25rem;
+    font-size: 1.05rem;
+    white-space: nowrap;
     font-weight: 700;
     background: linear-gradient(135deg, var(--primary) 0%, #9B7BF0 100%);
     -webkit-background-clip: text;
@@ -124,7 +127,7 @@ body {
     border-radius: 8px;
     padding: 0.75rem 1rem;
     color: var(--text-main);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
     transition: all 0.2s;
 }
 
@@ -486,9 +489,10 @@ body {
 }
 
 .badge {
-    font-size: 0.75rem;
-    background: linear-gradient(45deg, #10b981, #059669);
-    padding: 0.25rem 0.75rem;
+    font-size: 0.68rem;
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 0.2rem 0.6rem;
     border-radius: 999px;
     font-weight: 600;
 }
@@ -623,7 +627,7 @@ body {
     background: rgba(0, 0, 0, 0.75);
     color: white;
     font-size: 1.15rem;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
     font-weight: 500;
     text-shadow: 1px 1px 2px black;
     padding: 0.25rem 0.75rem;
@@ -689,9 +693,9 @@ body {
 }
 
 .speaker-time {
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     color: var(--text-muted);
-    font-family: monospace;
+    font-variant-numeric: tabular-nums;
 }
 
 .card-content {
@@ -707,10 +711,16 @@ body {
 }
 
 .content-block label {
-    font-size: 0.65rem;
-    text-transform: uppercase;
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
     color: var(--text-muted);
-    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+}
+.content-block label .label-hint {
+    font-weight: 400;
+    opacity: 0.7;
+    margin-left: 0.35rem;
 }
 
 
@@ -754,7 +764,7 @@ body {
     background: rgba(20, 20, 26, 0.04);
     padding: 2px 8px;
     border-radius: 4px;
-    color: var(--warning);
+    color: var(--text-muted);
     font-style: italic;
 }
 

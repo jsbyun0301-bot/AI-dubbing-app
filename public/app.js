@@ -509,15 +509,15 @@ ${text}
                 </div>
                 <div class="card-content">
                     <div class="content-block">
-                        <label>Original</label>
+                        <label>원문</label>
                         <div class="original-text">${dlg.originalText}</div>
                     </div>
                     <div class="content-block" style="position: relative;">
-                        <label>Translated (Click to edit)</label>
+                        <label>번역 <span class="label-hint">클릭해 수정</span></label>
                         <div contenteditable="true" class="editable-text translated-text" data-index="${index}">${dlg.translatedText || '...'}</div>
                         <div class="sync-indicator hidden" id="sync-ind-${index}">
                             <span class="spinner-small"></span>
-                            <span>Syncing audio...</span>
+                            <span>음성 재생성 중</span>
                         </div>
                     </div>
                 </div>
