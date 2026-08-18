@@ -31,10 +31,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // API 키는 서버에서만 다룹니다. 브라우저는 /api/* 프록시를 호출합니다.
 
+
     // UI Navigation Elements
     const step2Nav = document.getElementById('step-2-nav');
     const step3Nav = document.getElementById('step-3-nav');
     const mainHeader = document.getElementById('main-header');
+
+    // ── 단계 전환 ────────────────────────────────────────────────
+    // 1 스크립트 추출 · 2 번역 · 3 더빙 생성
+    // 각 단계에서 필요한 영역만 보이도록 정리합니다.
+    const STEP_TITLES = {
+        1: '1단계 · 영상 업로드 및 스크립트 추출',
+        2: '2단계 · 스크립트 번역',
+        3: '3단계 · AI 음성 더빙 생성'
+    };
+    window.currentStep = 1;
+
+    function goToStep(step) {
+        window.currentStep = step;
+        const $ = (id) => document.getElementById(id);
+        const show = (el, on) => el && el.classList.toggle('hidden', !on);
+
+        const hasVideo = Boolean(window.currentVideoFile || currentVideoFile);
+        const hasScript = Boolean(window.dialogues && window.dialogues.length);
+
+        // 왼쪽 — 영상 영역
+        show($('drop-zone'), step === 1 && !hasVideo);
+        show($('video-preview-container'), hasVideo);
+        const actions = document.querySelector('#video-preview-container .video-actions');
+        if (actions) actions.style.display = step === 1 ? '' : 'none';
+        show($('audio-result-container'), step === 3 && Boolean(window.generatedAudioBlobs?.length));
+
+        // 오른쪽 — 단계별 작업 영역
+        show($('analysis-results'), step >= 1 && hasScript);
+        show($('translation-section'), step === 2);
+        show($('dubbing-section'), step === 3);
+
+        // 레이아웃 · 제목 · 사이드바
+        const body = $('step-content');
+        if (body) body.classList.toggle('studio-mode', hasScript);
+        if (mainHeader) mainHeader.textContent = STEP_TITLES[step] || STEP_TITLES[1];
+
+        [['step-2-nav', 1], ['step-3-nav', 2], ['step-4-nav', 3]].forEach(([id, n]) => {
+            const nav = $(id);
+            if (!nav) return;
+            nav.classList.toggle('active', n === step);
+            nav.style.opacity = n === step ? '1' : '0.5';
+            nav.style.cursor = n < step ? 'pointer' : 'default';
+        });
+
+        if (body) body.scrollTop = 0;
+    }
+
+    // 사이드바로 이전 단계 되돌아가기
+    [['step-2-nav', 1], ['step-3-nav', 2], ['step-4-nav', 3]].forEach(([id, n]) => {
+        const nav = document.getElementById(id);
+        if (nav) nav.addEventListener('click', () => {
+            if (n < window.currentStep) goToStep(n);
+        });
+    });
+
+
 
     let currentVideoFile = null;
 
@@ -88,23 +145,20 @@ document.addEventListener('DOMContentLoaded', () => {
         videoPreview.src = fileURL;
 
         // Update UI
-        const container = document.getElementById('step-content');
-        if (container) container.classList.add('studio-mode');
-        
         videoPreview.src = URL.createObjectURL(file);
-        videoPreviewContainer.classList.remove('hidden');
-        dropZone.classList.add('hidden');
-        analysisResults.classList.add('hidden');
         btnNextStep3.disabled = true;
+        window.dialogues = [];
+        goToStep(1);
     }
 
     // Remove video
     btnRemoveVideo.addEventListener('click', () => {
         currentVideoFile = null;
+        window.currentVideoFile = null;
+        window.dialogues = [];
+        window.generatedAudioBlobs = [];
         videoPreview.src = '';
-        dropZone.classList.remove('hidden');
-        videoPreviewContainer.classList.add('hidden');
-        analysisResults.classList.add('hidden');
+        goToStep(1);
     });
 
     // --- Extract Script Logic (Step 2) ---
@@ -323,22 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDialogueCards();
         renderSegmentsTimeline();
         analysisResults.classList.remove('hidden');
-
-        // Show translation section
-        translationSection.classList.remove('hidden');
-
-        // Update UI Step Indicators to Step 3
-        if (step2Nav) {
-            step2Nav.classList.remove('active');
-            step2Nav.style.opacity = '0.5';
-        }
-        if (step3Nav) {
-            step3Nav.classList.add('active');
-            step3Nav.style.opacity = '1';
-        }
-        if (mainHeader) {
-            mainHeader.textContent = "3단계: 추출된 스크립트 다국어 번역";
-        }
+        goToStep(2);
 
         // Save the script for Step 3 in a global var
         window.extractedScript = text;
@@ -765,18 +804,7 @@ ${text}
     }
 
     btnNextStep4.addEventListener('click', () => {
-        dubbingSection.classList.remove('hidden');
-        if (step3Nav) {
-            step3Nav.classList.remove('active');
-            step3Nav.style.opacity = '0.5';
-        }
-        if (step4Nav) {
-            step4Nav.classList.add('active');
-            step4Nav.style.opacity = '1';
-        }
-        if (mainHeader) {
-            mainHeader.textContent = "4단계: AI 음성 더빙 합성 (ElevenLabs TTS)";
-        }
+        goToStep(3);
         generateVoiceSelectors();
     });
 
@@ -1166,5 +1194,7 @@ ${text}
     });
 
     // Note: I'll use window.isSyncPlaying to prevent double logic in btnPlaySyncedVideo
-});
 
+    // 최초 진입
+    goToStep(1);
+});
