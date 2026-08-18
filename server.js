@@ -90,6 +90,21 @@ function requireKey(res, key, name) {
     return true;
 }
 
+// 상태 점검 — 키 값은 노출하지 않고 설정 여부만 알려줍니다
+app.get('/api/health', (req, res) => {
+    res.json({
+        ok: true,
+        keys: {
+            elevenlabs: Boolean(ELEVEN_KEY),
+            gemini: Boolean(GEMINI_KEY)
+        },
+        // 어떤 이름으로 등록됐는지 확인용 (값은 포함하지 않음)
+        detectedEnvNames: Object.keys(process.env)
+            .filter((k) => /KEY|GEMINI|ELEVEN|GOOGLE/i.test(k))
+            .sort()
+    });
+});
+
 // STT — 음성/영상에서 스크립트 추출
 app.post('/api/stt', rateLimit, upload.single('file'), async (req, res) => {
     if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;
