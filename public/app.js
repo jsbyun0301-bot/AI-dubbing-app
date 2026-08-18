@@ -29,21 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const translationStepSubtitle = document.getElementById('translation-step-subtitle');
     const translationBadgeSpan = document.getElementById('translation-badge-span');
 
-    window.geminiKey = "";
-    window.elevenKey = "";
-
-    // Fetch API keys from server on load
-    fetch('/api/get-keys')
-        .then(res => {
-            if (!res.ok) throw new Error('Response not ok: ' + res.status);
-            return res.json();
-        })
-        .then(data => {
-            console.log("Keys loaded:", data.elevenlabs ? "OK" : "EMPTY");
-            if (data.elevenlabs) window.elevenKey = data.elevenlabs;
-            if (data.gemini) window.geminiKey = data.gemini;
-        })
-        .catch(err => console.error("Failed to fetch keys:", err));
+    // API 키는 서버에서만 다룹니다. 브라우저는 /api/* 프록시를 호출합니다.
 
     // UI Navigation Elements
     const step2Nav = document.getElementById('step-2-nav');
@@ -134,23 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnExtractScript.addEventListener('click', async () => {
-        // If key not loaded yet, try fetching again
-        if (!window.elevenKey) {
-            try {
-                const res = await fetch('/api/get-keys');
-                const data = await res.json();
-                if (data.elevenlabs) window.elevenKey = data.elevenlabs;
-            } catch (e) {
-                console.error("Retry fetch keys failed:", e);
-            }
-        }
-        const elevenKey = window.elevenKey;
-
-        if (!elevenKey) {
-            alert('서버에서 ElevenLabs API 키를 불러올 수 없습니다. 환경변수(ELEVENLABS_API_KEY)를 확인하세요.');
-            return;
-        }
-
         if (!currentVideoFile) {
             alert('업로드된 파일이 없습니다.');
             return;
@@ -162,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSkeletonCards(); // Show skeleton cards
 
         try {
-            await extractScriptWithElevenLabs(currentVideoFile, elevenKey);
+            await extractScriptWithElevenLabs(currentVideoFile);
         } catch (error) {
             console.error('STT Error:', error);
             alert(`스크립트 추출 중 오류가 발생했습니다: ${error.message}`);
@@ -172,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function extractScriptWithElevenLabs(file, apiKey) {
+    async function extractScriptWithElevenLabs(file) {
         // Create FormData to send the file
         const formData = new FormData();
         formData.append('file', file);
@@ -180,13 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('diarize', 'true'); // Enable speaker diarization
         formData.append('tag_audio_events', 'false');
 
-        const url = `https://api.elevenlabs.io/v1/speech-to-text`;
-
-        const response = await fetch(url, {
+        const response = await fetch('/api/stt', {
             method: 'POST',
-            headers: {
-                'xi-api-key': apiKey
-            },
             body: formData
         });
 
@@ -312,10 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.classList.remove('hidden');
 
         try {
-            if (!window.geminiKey) {
-                throw new Error('Gemini API 키가 설정되지 않았습니다 (서버 GEMINI_API_KEY 환경변수 확인).');
-            }
-            await translateWithGemini(scriptToTranslate, targetLanguage, window.geminiKey);
+            await translateWithGemini(scriptToTranslate, targetLanguage);
         } catch (error) {
             console.error('Translation Error:', error);
             alert(`번역 중 오류가 발생했습니다: ${error.message}`);
@@ -327,45 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function translateWithGroq(text, targetLang, apiKey) {
-        const systemPrompt = `당신은 극영화 미디어 자막 번역가입니다. 제공된 대화 스크립트를 ${targetLang} 언어로 가장 자연스럽게 번역해주세요.
-[필수 규칙]
-1. 원본 스크립트에 포함된 대괄호 형태의 화자 및 시간 표시 (예: [speaker_0][00:00-00:05]:) 구조와 줄바꿈을 절대 훼손하지 말고 그대로 유지하세요.
-2. 번역된 전체 스크립트 텍스트만 출력하고, 불필요한 마크다운 기호(\`\`\`)나 인사말, 설명은 절대 포함하지 마세요.
-3. [감정 연기 지시] 각 대사마다 맨 앞에 그 상황이나 문맥에 꼭 맞는 '감정 및 연기 지시문'을 괄호 안에 한국어로 넣어주세요. (예: \`[speaker_0][00:00-00:05]: (화난 목소리로) 도대체 왜 그러는 거야!\`)
-4. [대사 길이 조절] 동영상 하이라이트 더빙용이므로, 읽는 시간이 몹시 길어지지 않도록 의역하여 간결하게 다듬어주세요. 너무 길게 번역하지 마세요.`;
-
-        const url = `https://api.groq.com/openai/v1/chat/completions`;
-        const payload = {
-            model: "llama-3.3-70b-versatile", // Updated to the replacement model
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: text }
-            ],
-            temperature: 0.3
-        };
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error?.message || 'Groq API request failed');
-        }
-
-        const data = await response.json();
-        const translatedText = data.choices[0].message.content.trim();
-
-        displayTranslatedResults(translatedText);
-    }
-
-    async function translateWithGemini(text, targetLang, apiKey) {
+    async function translateWithGemini(text, targetLang) {
         const prompt = `
 당신은 극영화 미디어 자막 번역가입니다. 제공된 대화 스크립트를 ${targetLang} 언어로 가장 자연스럽게 번역해주세요.
 [필수 규칙]
@@ -378,18 +301,10 @@ document.addEventListener('DOMContentLoaded', () => {
 ${text}
 `;
 
-        const model = 'gemini-2.5-flash';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-        const payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3 }
-        };
-
-        const response = await fetch(url, {
+        const response = await fetch('/api/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ prompt })
         });
 
         if (!response.ok) {
@@ -543,9 +458,7 @@ ${text}
     async function regenerateSingleAudio(index) {
         const dlg = window.dialogues[index];
         const indicator = document.getElementById(`sync-ind-${index}`);
-        const elevenKey = window.elevenKey;
-        
-        if (!elevenKey || !dlg.translatedText) return;
+        if (!dlg.translatedText) return;
 
         // Show syncing state
         if (indicator) indicator.classList.remove('hidden');
@@ -561,7 +474,7 @@ ${text}
             });
 
             const textForTTS = dlg.translatedText.replace(/\(.*?\)/g, '').trim();
-            const { audioUrl, blob } = await generateSpeechWithElevenLabs(textForTTS, voiceId, elevenKey);
+            const { audioUrl, blob } = await generateSpeechWithElevenLabs(textForTTS, voiceId);
 
             // Update global state
             if (window.generatedAudioBlobs && window.generatedAudioBlobs[index]) {
@@ -771,22 +684,6 @@ ${text}
 
 
     btnGenerateDubbing.addEventListener('click', async () => {
-        // If key not loaded yet, try fetching again
-        if (!window.elevenKey) {
-            try {
-                const res = await fetch('/api/get-keys');
-                const data = await res.json();
-                if (data.elevenlabs) window.elevenKey = data.elevenlabs;
-            } catch (e) {
-                console.error("Retry fetch keys failed:", e);
-            }
-        }
-        const elevenKey = window.elevenKey;
-
-        if (!elevenKey) {
-            alert('서버에서 ElevenLabs API 키를 불러올 수 없습니다. 파일(elevenlabs_api_key.txt)을 확인하세요.');
-            return;
-        }
 
         if (!window.dialogues || window.dialogues.length === 0) {
             alert('합성할 번역된 스크립트가 없습니다.');
@@ -837,7 +734,7 @@ ${text}
                 // Remove bracketed emotion tags just before sending to TTS
                  const textForTTS = text.replace(/\(.*?\)/g, '').trim();
                  
-                 const { audioUrl, blob } = await generateSpeechWithElevenLabs(textForTTS, voiceId, elevenKey);
+                 const { audioUrl, blob } = await generateSpeechWithElevenLabs(textForTTS, voiceId);
                  
                  if (!window.generatedAudioBlobs) window.generatedAudioBlobs = [];
                  window.generatedAudioBlobs.push({ start, end, blob });
@@ -864,25 +761,11 @@ ${text}
         }
     });
 
-    async function generateSpeechWithElevenLabs(text, voiceId, apiKey) {
-        const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-        const payload = {
-            text: text,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: {
-                stability: 0.35,
-                similarity_boost: 0.65
-            }
-        };
-
-        const response = await fetch(url, {
+    async function generateSpeechWithElevenLabs(text, voiceId) {
+        const response = await fetch('/api/tts', {
             method: 'POST',
-            headers: {
-                'Accept': 'audio/mpeg',
-                'Content-Type': 'application/json',
-                'xi-api-key': apiKey
-            },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voiceId })
         });
 
         if (!response.ok) {

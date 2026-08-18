@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -47,28 +49,100 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-app.get('/api/get-keys', (req, res) => {
+// ─────────────────────────────────────────────────────────────
+// API 프록시 — 키는 서버에만 두고, 브라우저로 내려보내지 않습니다.
+// 로컬: .env  /  배포: 호스팅 환경변수
+// ─────────────────────────────────────────────────────────────
+const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY || '';
+const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
+
+function requireKey(res, key, name) {
+    if (!key) {
+        res.status(500).json({ error: `${name} 키가 설정되지 않았습니다. .env 파일을 확인해 주세요.` });
+        return false;
+    }
+    return true;
+}
+
+// STT — 음성/영상에서 스크립트 추출
+app.post('/api/stt', upload.single('file'), async (req, res) => {
+    if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;
+    if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
     try {
-        // First check Vercel Environment variables
-        let elevenKey = process.env.ELEVENLABS_API_KEY || '';
-        
-        // If not found, check local file
-        const keyPath = path.join(__dirname, 'elevenlabs_api_key.txt');
-        if (!elevenKey && fs.existsSync(keyPath)) {
-            elevenKey = fs.readFileSync(keyPath, 'utf8').trim();
-        } else if (!elevenKey) {
-            console.warn('elevenlabs_api_key.txt not found...');
-            const fallbackPath = path.join(__dirname, 'elevenlabs_api_key');
-            if (fs.existsSync(fallbackPath)) {
-                elevenKey = fs.readFileSync(fallbackPath, 'utf8').trim();
-            }
-        }
-        // Gemini 키도 환경변수에서 (하드코딩 제거)
-        const geminiKey = process.env.GEMINI_API_KEY || '';
-        res.json({ elevenlabs: elevenKey, gemini: geminiKey });
+        const form = new FormData();
+        form.append('file', new Blob([fs.readFileSync(req.file.path)]), req.file.originalname);
+        form.append('model_id', 'scribe_v1');
+        form.append('diarize', 'true');
+        form.append('tag_audio_events', 'false');
+
+        const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+            method: 'POST',
+            headers: { 'xi-api-key': ELEVEN_KEY },
+            body: form
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return res.status(r.status).json(data);
+        res.json(data);
     } catch (err) {
-        console.error('Error reading key file:', err);
-        res.status(500).json({ error: 'Failed to read keys' });
+        console.error('STT error:', err);
+        res.status(500).json({ error: 'STT 처리에 실패했습니다.' });
+    } finally {
+        fs.unlink(req.file.path, () => {});
+    }
+});
+
+// 번역 — Gemini
+app.post('/api/translate', async (req, res) => {
+    if (!requireKey(res, GEMINI_KEY, 'GEMINI_API_KEY')) return;
+    const { prompt, model = 'gemini-2.5-flash', temperature = 0.3 } = req.body || {};
+    if (!prompt) return res.status(400).json({ error: 'prompt가 없습니다.' });
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
+        const r = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature }
+            })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return res.status(r.status).json(data);
+        res.json(data);
+    } catch (err) {
+        console.error('Translate error:', err);
+        res.status(500).json({ error: '번역에 실패했습니다.' });
+    }
+});
+
+// TTS — 음성 합성
+app.post('/api/tts', async (req, res) => {
+    if (!requireKey(res, ELEVEN_KEY, 'ELEVENLABS_API_KEY')) return;
+    const { text, voiceId } = req.body || {};
+    if (!text || !voiceId) return res.status(400).json({ error: 'text 또는 voiceId가 없습니다.' });
+    try {
+        const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'audio/mpeg',
+                'Content-Type': 'application/json',
+                'xi-api-key': ELEVEN_KEY
+            },
+            body: JSON.stringify({
+                text,
+                model_id: 'eleven_multilingual_v2',
+                voice_settings: { stability: 0.35, similarity_boost: 0.65 }
+            })
+        });
+        if (!r.ok) {
+            const e = await r.text();
+            return res.status(r.status).json({ error: e });
+        }
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.send(Buffer.from(await r.arrayBuffer()));
+    } catch (err) {
+        console.error('TTS error:', err);
+        res.status(500).json({ error: '음성 합성에 실패했습니다.' });
     }
 });
 
