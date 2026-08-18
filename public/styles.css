@@ -260,10 +260,34 @@ body {
     margin-bottom: 2rem;
 }
 
+/* 초기 업로드 화면 — 드롭존이 남은 세로 공간을 채우도록 */
+.content-body:not(.studio-mode) {
+    display: flex;
+    flex-direction: column;
+}
+.content-body:not(.studio-mode) .studio-wrapper,
+.content-body:not(.studio-mode) .upload-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+.content-body:not(.studio-mode) .upload-section {
+    margin-bottom: 0;
+}
+.content-body:not(.studio-mode) .drop-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+}
+
 .drop-zone {
     border: 2px dashed var(--border);
     border-radius: 16px;
-    padding: 4rem 2rem;
+    padding: 3rem 2rem;
     text-align: center;
     cursor: pointer;
     background: var(--bg-panel);
@@ -276,9 +300,20 @@ body {
 }
 
 .upload-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.8;
+    margin-bottom: 1.25rem;
+    opacity: 0.55;
+    color: var(--text-muted);
+    transition: opacity 0.3s ease, color 0.3s ease;
+}
+.upload-icon svg {
+    display: block;
+    width: 56px;
+    height: 56px;
+}
+.drop-zone:hover .upload-icon,
+.drop-zone.dragover .upload-icon {
+    opacity: 1;
+    color: var(--primary);
 }
 
 .drop-zone h3 {
@@ -835,4 +870,54 @@ body {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* ── 사이드바 하단 안내 ────────────────────────── */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+.sidebar-note {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+}
+.sidebar-note h5 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--text-main);
+}
+.sidebar-note p {
+    font-size: 0.75rem;
+    line-height: 1.65;
+    color: var(--text-muted);
+    word-break: keep-all;
+}
+.sidebar-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.sidebar-meta span {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+}
+.sidebar-powered {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border);
+}
+.sidebar-powered b {
+    font-weight: 600;
+    color: var(--text-muted);
 }
