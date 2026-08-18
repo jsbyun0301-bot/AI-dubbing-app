@@ -929,3 +929,12 @@ body {
     font-weight: 600;
     color: var(--text-muted);
 }
+
+/* ── 영상 자막 표시 ────────────────────────────── */
+video::cue {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    background: rgba(10, 10, 14, 0.72);
+    color: #fff;
+    padding: 0.1em 0.4em;
+}

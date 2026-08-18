@@ -258,14 +258,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${m}:${s}`;
         }
 
+        // 한 화자가 길게 말하면 자막·카드가 한 덩어리로 뭉치므로,
+        // 문장이 끝나거나 일정 길이를 넘으면 블록을 나눕니다.
+        const SENT_END = /[.!?。？！]$|(다|요|죠|까|나|네|군요|습니다|입니다)$/;
+        const MAX_BLOCK_SEC = 8;
+        const MAX_BLOCK_CHARS = 60;
+
+        const flush = () => {
+            const text = currentSentence.trim();
+            if (!text) return;
+            window.originalBlocks.push({ speaker: currentSpeaker, start: currentStart, end: currentEnd, text });
+            formattedScript += `[${currentSpeaker}][${formatTime(currentStart)}-${formatTime(currentEnd)}]: ${text}\n\n`;
+            currentSentence = "";
+        };
+
         data.words.forEach((wordObj) => {
             if (wordObj.speaker_id === currentSpeaker) {
                 currentSentence += wordObj.text + " ";
                 currentEnd = wordObj.end || currentEnd; // Keep track of the last word's end time
+
+                const trimmed = currentSentence.trim();
+                const tooLong = (currentEnd - currentStart) >= MAX_BLOCK_SEC || trimmed.length >= MAX_BLOCK_CHARS;
+                const sentenceDone = SENT_END.test(trimmed.replace(/\s+$/, ''));
+                if (trimmed && (sentenceDone || tooLong)) {
+                    flush();
+                    currentStart = wordObj.end || currentEnd;
+                }
             } else {
                 // Speaker changed, append previous sentence
-                window.originalBlocks.push({ speaker: currentSpeaker, start: currentStart, end: currentEnd, text: currentSentence.trim() });
-                formattedScript += `[${currentSpeaker}][${formatTime(currentStart)}-${formatTime(currentEnd)}]: ${currentSentence.trim()}\n\n`;
+                flush();
                 // Start new sentence for new speaker
                 currentSpeaker = wordObj.speaker_id;
                 currentSentence = wordObj.text + " ";
@@ -274,13 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Append the last sentence
-        if (currentSentence) {
-            window.originalBlocks.push({ speaker: currentSpeaker, start: currentStart, end: currentEnd, text: currentSentence.trim() });
-            formattedScript += `[${currentSpeaker}][${formatTime(currentStart)}-${formatTime(currentEnd)}]: ${currentSentence.trim()}`;
-        }
-
-        return formattedScript;
+        flush();
+        return formattedScript.trim();
     }
 
     function displayScriptResults(text) {
@@ -604,9 +620,14 @@ ${text}
             
             const start = formatTime(dlg.startTime);
             const end = formatTime(dlg.endTime);
-            const text = dlg.translatedText.trim() || "...";
-            
-            vtt += `${index + 1}\n${start} --> ${end} line:92%\n${text}\n\n`;
+            let text = dlg.translatedText.trim() || "...";
+            // 자막 한 줄이 길면 가운데에서 나눠 최대 두 줄로 표시
+            if (text.length > 34) {
+                const mid = text.lastIndexOf(' ', Math.ceil(text.length / 2));
+                if (mid > 0) text = text.slice(0, mid) + '\n' + text.slice(mid + 1);
+            }
+
+            vtt += `${index + 1}\n${start} --> ${end} line:88%\n${text}\n\n`;
         });
 
         // Inject logic...
