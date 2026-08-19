@@ -90,15 +90,15 @@
                         </div>
 
                         <!-- Moved Result Container: Compact Layout -->
-                        <div class="audio-result-container hidden" id="audio-result-container" style="margin-top: 1rem; text-align: left; padding: 1.25rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border);">
-                            <h4 style="margin-bottom: 0.75rem; color: var(--accent-light); text-align:center; font-size: 0.9rem;">🎉 오디오 합성 및 결과 확인</h4>
+                        <div class="audio-result-container hidden" id="audio-result-container">
+                            <h4 class="result-title">오디오 합성 및 결과 확인</h4>
 
-                            <div style="margin-bottom: 0.75rem; text-align: center; display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button class="btn btn-secondary" id="btn-play-synced-video" style="background-color: var(--accent-light); color: var(--bg-main); flex: 1; font-weight: bold; border: none; min-width: 120px; padding: 0.5rem; font-size: 0.85rem;">🎬 자동 재생</button>
-                                <button class="btn btn-secondary" id="btn-download-srt" style="flex: 1; font-weight: bold; border: 1px solid var(--border); min-width: 120px; padding: 0.5rem; font-size: 0.85rem;">📝 SRT 자막</button>
-                                <button class="btn btn-primary" id="btn-download-video" style="flex: 1; font-weight: bold; border: none; min-width: 120px; padding: 0.5rem; font-size: 0.85rem;">💾 MP4 병합</button>
+                            <div class="result-actions">
+                                <button class="btn btn-secondary" id="btn-play-synced-video">자동 재생</button>
+                                <button class="btn btn-secondary" id="btn-download-srt">SRT 자막</button>
+                                <button class="btn btn-primary" id="btn-download-video">MP4 병합</button>
                             </div>
-                            <div id="playlist-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                            <div id="playlist-container">
                                 <!-- JS will inject audio elements here -->
                             </div>
                         </div>

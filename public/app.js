@@ -619,7 +619,7 @@ ${text}
                         // Update text label above audio
                         const label = document.querySelector(`.playlist-label[data-index="${index}"]`);
                         if (label) {
-                            label.innerHTML = `<b>[${dlg.speaker}]</b> ${dlg.translatedText} <span style="font-size: 0.8em; color: var(--accent);">(구간: ${dlg.startTime}초 ~ ${dlg.endTime}초)</span>`;
+                            label.innerHTML = `<b>[${dlg.speaker}]</b> ${dlg.translatedText} <span class="playlist-range">${dlg.startTime}초 ~ ${dlg.endTime}초</span>`;
                         }
 
                         // Briefly highlight to show sync success
@@ -717,7 +717,7 @@ ${text}
                 const targetCard = cards[idx];
                 if (targetCard) {
                     targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    targetCard.style.borderColor = "var(--accent)";
+                    targetCard.style.borderColor = "var(--primary)";
                     setTimeout(() => targetCard.style.borderColor = "transparent", 2000);
                 }
             };
@@ -869,9 +869,9 @@ ${text}
                  window.generatedAudioBlobs.push({ start, end, blob });
 
                  const audioHtml = `
-                     <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;">
-                         <span class="playlist-label" data-index="${i}" style="font-size: 0.9rem; color: #ccc;"><b>[${speaker}]</b> ${text} <span style="font-size: 0.8em; color: var(--accent);">(구간: ${start}초 ~ ${end}초)</span></span>
-                         <audio controls src="${audioUrl}" class="playlist-audio" data-start="${start}" data-end="${end}" data-index="${i}" style="width: 100%; height: 35px;"></audio>
+                     <div class="playlist-item">
+                         <span class="playlist-label" data-index="${i}"><b>[${speaker}]</b> ${text} <span class="playlist-range">${start}초 ~ ${end}초</span></span>
+                         <audio controls src="${audioUrl}" class="playlist-audio" data-start="${start}" data-end="${end}" data-index="${i}"></audio>
                      </div>
                  `;
                  playlistContainer.insertAdjacentHTML('beforeend', audioHtml);
