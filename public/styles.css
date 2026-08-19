@@ -1072,3 +1072,28 @@ video::cue {
     margin-left: auto;
     margin-right: auto;
 }
+
+/* ── 번역 설정을 대사 카드 위로 ─────────────────── */
+.translation-controls {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.translation-controls h3 {
+    margin-bottom: 0.9rem;
+}
+.translation-controls .language-selector {
+    margin: 0 !important;
+}
+.translation-section.translation-footer {
+    margin-top: 1.25rem !important;
+    border-top: none !important;
+    padding-top: 0 !important;
+}
+.translation-section.translation-footer .step-actions {
+    margin-top: 0 !important;
+}
+/* 이동 후 남은 빈 컨테이너(숨김 textarea만 보유) 제거 */
+.translation-section.translation-footer > .analysis-details {
+    display: none;
+}

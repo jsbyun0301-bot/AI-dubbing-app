@@ -86,6 +86,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 결과 영역이 영상 바로 아래에 있어, 세로 배치에서는
     // 합성 버튼보다 위에 놓이는 문제가 있었습니다. 순서를 바로잡습니다.
+    // 번역 설정(언어 선택 · 번역 시작)은 대사 카드 위에 있어야
+    // 버튼을 누른 자리에서 바로 결과를 볼 수 있습니다.
+    (function relocateTranslationControls() {
+        const section = document.getElementById('translation-section');
+        const editor = document.getElementById('dialogue-editor');
+        const details = document.querySelector('#analysis-results > .analysis-details');
+        if (!section || !editor || !details) return;
+
+        // 번역 헤더 + 언어 선택을 카드 위로 이동
+        const header = section.querySelector('h3');
+        const selector = section.querySelector('.language-selector');
+        const controls = document.createElement('div');
+        controls.className = 'translation-controls';
+        if (header) controls.appendChild(header);
+        if (selector) controls.appendChild(selector);
+        details.insertBefore(controls, editor);
+
+        // 남은 '다음 단계' 버튼은 카드 아래에 유지
+        section.classList.add('translation-footer');
+    })();
+
     (function relocateResultSection() {
         const result = document.getElementById('audio-result-container');
         const dubbing = document.getElementById('dubbing-section');
@@ -533,6 +554,14 @@ ${text}
 
         renderDialogueCards();
         btnNextStep4.disabled = false;
+
+        // 번역이 끝나면 첫 대사부터 확인할 수 있도록 이동
+        requestAnimationFrame(() => {
+            const editor = document.getElementById('dialogue-editor');
+            if (editor) editor.scrollTop = 0;
+            const controls = document.querySelector('.translation-controls');
+            if (controls) controls.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
         
         // Ensure legacy variable and textarea are updated
         updateLegacyTextarea();
