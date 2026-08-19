@@ -3,7 +3,11 @@
 영상을 올리면 **스크립트 추출 → 번역 → 음성 합성 → 영상 병합**까지 한 번에 처리하는 웹앱입니다.
 여러 AI 서비스를 하나의 흐름으로 엮어, 더빙 과정을 브라우저에서 끝낼 수 있도록 만들었습니다.
 
-![AI Dubbing Studio](docs/screenshot.png)
+![업로드 화면](docs/screenshot.png)
+
+추출된 대사를 화자별로 확인하고, 번역문을 직접 고칠 수 있습니다.
+
+![스크립트 편집 화면](docs/screenshot-editor.png)
 
 ---
 
