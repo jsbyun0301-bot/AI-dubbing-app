@@ -115,6 +115,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })();
 
+    // 3단계에서는 영상 플레이어를 결과 칸 안으로 옮겨,
+    // 합성한 음성이 영상에 어떻게 얹히는지 같은 자리에서 확인하도록 합니다.
+    const videoHomeAnchor = document.createComment('video-preview-home');
+    if (videoPreviewContainer && videoPreviewContainer.parentNode) {
+        videoPreviewContainer.parentNode.insertBefore(videoHomeAnchor, videoPreviewContainer);
+    }
+
+    function placeVideoForStep(step) {
+        const result = document.getElementById('audio-result-container');
+        if (!videoPreviewContainer) return;
+        const inResult = step === 3 && result && !result.classList.contains('hidden');
+
+        if (inResult) {
+            if (videoPreviewContainer.parentNode !== result) {
+                const title = result.querySelector('.result-title');
+                result.insertBefore(videoPreviewContainer, title ? title.nextSibling : result.firstChild);
+            }
+            videoPreviewContainer.classList.add('in-result');
+        } else {
+            videoPreviewContainer.classList.remove('in-result');
+            if (videoHomeAnchor.parentNode && videoPreviewContainer.parentNode !== videoHomeAnchor.parentNode) {
+                videoHomeAnchor.parentNode.insertBefore(videoPreviewContainer, videoHomeAnchor.nextSibling);
+            }
+        }
+    }
+
     // ── 단계 전환 ────────────────────────────────────────────────
     // 1 스크립트 추출 · 2 번역 · 3 더빙 생성
     // 각 단계에서 필요한 영역만 보이도록 정리합니다.
@@ -162,6 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
             nav.style.opacity = n === step ? '1' : '0.5';
             nav.style.cursor = n < step ? 'pointer' : 'default';
         });
+
+        placeVideoForStep(step);
 
         if (body) body.scrollTop = 0;
     }
@@ -943,6 +971,7 @@ ${text}
 
         playlistContainer.innerHTML = '';
         audioResultContainer.classList.remove('hidden');
+        placeVideoForStep(3);
         loadingOverlay.classList.remove('hidden');
 
         try {
@@ -1020,6 +1049,72 @@ ${text}
     }
 
     // --- Sync Video & Dubbing Logic ---
+    // 병합된 영상을 결과 칸의 플레이어에 그대로 띄웁니다.
+    // 파일을 내려받아 따로 열어보지 않아도 적용 결과를 확인할 수 있습니다.
+    function showMergedResult(blob) {
+        const result = document.getElementById('audio-result-container');
+        if (!videoPreview || !result) return;
+
+        // 원본 재생 상태 정리
+        videoPreview.ontimeupdate = null;
+        window.isSyncPlaying = false;
+        document.querySelectorAll('.playlist-audio').forEach(a => { a.pause(); a.currentTime = 0; });
+
+        if (!window.originalVideoUrl) window.originalVideoUrl = videoPreview.src;
+        if (window.mergedVideoUrl) URL.revokeObjectURL(window.mergedVideoUrl);
+        window.mergedVideoUrl = URL.createObjectURL(blob);
+
+        // 자막은 영상에 구워져 있으므로 별도 트랙을 걷어냅니다
+        Array.from(videoPreview.getElementsByTagName('track')).forEach(t => t.remove());
+        videoPreview.src = window.mergedVideoUrl;
+        videoPreview.muted = false;
+        videoPreview.currentTime = 0;
+        videoPreview.play().catch(() => {});
+
+        renderMergedNotice(result);
+        videoPreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderMergedNotice(result) {
+        let notice = document.getElementById('merged-notice');
+        if (!notice) {
+            notice = document.createElement('div');
+            notice.id = 'merged-notice';
+            notice.className = 'merged-notice';
+            const title = result.querySelector('.result-title');
+            result.insertBefore(notice, title ? title.nextSibling : result.firstChild);
+        }
+        notice.innerHTML = `
+            <span class="merged-label">더빙 음성과 자막이 입혀진 영상입니다</span>
+            <span class="merged-buttons">
+                <button type="button" class="btn btn-secondary" id="btn-show-original">원본 보기</button>
+                <button type="button" class="btn btn-primary" id="btn-save-merged">MP4 저장</button>
+            </span>
+        `;
+        notice.classList.remove('hidden');
+
+        document.getElementById('btn-save-merged').addEventListener('click', () => {
+            const a = document.createElement('a');
+            a.href = window.mergedVideoUrl;
+            a.download = 'ai-dubbing-result.mp4';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        });
+
+        document.getElementById('btn-show-original').addEventListener('click', () => restoreOriginalVideo());
+    }
+
+    function restoreOriginalVideo() {
+        if (!videoPreview || !window.originalVideoUrl) return;
+        videoPreview.pause();
+        videoPreview.src = window.originalVideoUrl;
+        videoPreview.muted = false;
+        injectWebVTTFromDialogues();
+        const notice = document.getElementById('merged-notice');
+        if (notice) notice.classList.add('hidden');
+    }
+
     const btnPlaySyncedVideo = document.getElementById('btn-play-synced-video');
 
     if (btnPlaySyncedVideo) {
@@ -1038,8 +1133,8 @@ ${text}
                 return;
             }
 
-            // Scroll to video
-            videoPreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 결과 칸 안의 플레이어로 부드럽게 이동
+            videoPreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             // Reset state
             audios.forEach(a => {
@@ -1200,16 +1295,9 @@ ${text}
                     throw new Error(errResult.error || 'Server error during video merging');
                 }
 
-                // Trigger download
+                // 병합 결과를 같은 자리에서 바로 재생합니다
                 const blob = await response.blob();
-                const downloadUrl = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = downloadUrl;
-                a.download = 'ai-dubbing-result.mp4';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(downloadUrl);
+                showMergedResult(blob);
 
             } catch (err) {
                 console.error('Muxing error:', err);
