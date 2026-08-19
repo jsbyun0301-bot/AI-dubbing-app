@@ -116,7 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 레이아웃 · 제목 · 사이드바
         const body = $('step-content');
-        if (body) body.classList.toggle('studio-mode', hasScript);
+        if (body) {
+            body.classList.toggle('studio-mode', hasScript);
+            // 2단계(번역)는 대사를 읽고 고치는 화면이라 전체 폭을 씁니다.
+            body.classList.toggle('layout-full', step === 2);
+        }
         if (mainHeader) mainHeader.textContent = STEP_TITLES[step] || STEP_TITLES[1];
 
         [['step-2-nav', 1], ['step-3-nav', 2], ['step-4-nav', 3]].forEach(([id, n]) => {

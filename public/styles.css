@@ -1053,3 +1053,15 @@ video::cue {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.75);
 }
+
+/* ── 2단계 · 번역 화면은 전체 폭 ──────────────────── */
+.content-body.layout-full .studio-wrapper {
+    display: block;
+}
+.content-body.layout-full .upload-section {
+    max-width: 640px;
+    margin: 0 auto 1.5rem;
+}
+.content-body.layout-full .upload-section video {
+    max-height: 220px;
+}
