@@ -122,7 +122,7 @@ body {
 
 .premium-input {
     width: 100%;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--bg-subtle);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 0.75rem 1rem;
@@ -352,7 +352,7 @@ body {
     padding: 1rem; /* Restored comfortable padding */
     border: 1px solid var(--border);
     transition: all 0.3s ease;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(20, 20, 26, 0.08);
     /* Removed overflow: hidden to prevent button clipping */
 }
 
@@ -369,7 +369,7 @@ body {
 .segments-timeline {
     width: 100%;
     height: 12px;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--bg-subtle);
     border-radius: 6px;
     margin-top: 1rem;
     position: relative;
@@ -477,7 +477,7 @@ body {
     padding: 2.5rem;
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(20px);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 16px 40px rgba(20, 20, 26, 0.12);
     animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -536,7 +536,7 @@ body {
 }
 
 .analysis-details {
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--bg-subtle);
     padding: 1.5rem;
     border-radius: 12px;
     margin-bottom: 2rem;
@@ -624,7 +624,7 @@ body {
 
 /* Video Subtitle Styling */
 ::cue {
-    background: rgba(0, 0, 0, 0.75);
+    background: var(--bg-subtle);
     color: white;
     font-size: 1.15rem;
     font-family: 'Pretendard Variable', Pretendard, sans-serif;
@@ -725,35 +725,38 @@ body {
 
 
 .editable-text {
-    background: rgba(0,0,0,0.2);
-    border: 1px solid transparent;
-    border-radius: 6px;
+    background: var(--primary-soft);
+    border: 1px solid rgba(var(--primary-rgb), 0.18);
+    border-radius: 8px;
     padding: 0.75rem;
     color: var(--text-main);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     transition: all 0.2s;
-    line-height: 1.5;
-    min-height: 80px;
+    line-height: 1.6;
+    min-height: 60px;
 }
 
 
 .editable-text:focus {
     outline: none;
     border-color: var(--primary);
-    background: rgba(0,0,0,0.4);
+    background: var(--bg-subtle);
 }
 
 .original-text {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    padding: 0.5rem 0;
+    color: var(--text-main);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    padding: 0.75rem;
     min-height: 40px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
 }
 
 
 .translated-text {
-    border-bottom: 2px solid rgba(20, 20, 26, 0.04);
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.18);
 }
 
 .emotion-tag {
@@ -870,7 +873,7 @@ body {
     gap: 6px;
     font-size: 0.65rem;
     color: var(--primary);
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--bg-subtle);
     padding: 2px 8px;
     border-radius: 4px;
     backdrop-filter: blur(2px);
