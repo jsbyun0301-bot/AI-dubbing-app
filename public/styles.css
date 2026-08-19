@@ -399,7 +399,7 @@ body {
 
 .timeline-segment.active {
     opacity: 1;
-    background: var(--accent);
+    background: var(--primary);
 }
 
 
@@ -562,7 +562,7 @@ body {
 .loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 17, 21, 0.8);
+    background: rgba(245, 244, 252, 0.90);
     backdrop-filter: blur(4px);
     display: flex;
     flex-direction: column;
@@ -678,8 +678,8 @@ body {
 }
 
 .dialogue-card.active .speaker-id {
-    color: #fff;
-    text-shadow: 0 0 8px var(--primary);
+    color: var(--primary);
+    font-weight: 700;
 }
 
 .card-speaker {
@@ -869,7 +869,7 @@ body {
 .spinner-small {
     width: 12px;
     height: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(var(--primary-rgb), 0.25);
     border-radius: 50%;
     border-top-color: var(--primary);
     animation: spin 0.8s linear infinite;
@@ -939,7 +939,7 @@ body {
 .sidebar-meta span {
     font-size: 0.68rem;
     color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-subtle);
     border-radius: 6px;
     padding: 0.25rem 0.5rem;
 }
@@ -1037,21 +1037,21 @@ video::cue {
     width: 240px;
     height: 6px;
     margin-top: 1rem;
-    background: rgba(255, 255, 255, 0.22);
+    background: rgba(20, 20, 26, 0.10);
     border-radius: 999px;
     overflow: hidden;
 }
 .progress-fill {
     height: 100%;
     width: 0%;
-    background: #fff;
+    background: var(--primary);
     border-radius: 999px;
     transition: width 0.25s ease;
 }
 .progress-count {
     margin-top: 0.5rem;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--text-muted);
 }
 
 /* ── 2단계 · 번역 화면은 전체 폭 ──────────────────── */
@@ -1147,4 +1147,10 @@ video::cue {
 @keyframes progress-slide {
     0%   { transform: translateX(-100%); }
     100% { transform: translateX(250%); }
+}
+
+/* 로딩 오버레이 문구 — 밝은 스크림에 맞춘 색 */
+.loading-overlay p {
+    color: var(--text-main);
+    font-weight: 600;
 }

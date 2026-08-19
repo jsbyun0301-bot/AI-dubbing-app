@@ -210,6 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 오른쪽 — 단계별 작업 영역
         show($('analysis-results'), step >= 1 && hasScript);
         show($('translation-section'), step === 2);
+        // 번역 컨트롤은 카드 위로 빼두었으므로 별도로 함께 숨깁니다
+        const trControls = document.querySelector('.translation-controls');
+        if (trControls) trControls.classList.toggle('hidden', step !== 2);
         show($('dubbing-section'), step === 3);
 
         // 레이아웃 · 제목 · 사이드바
@@ -952,7 +955,7 @@ ${text}
         dynamicVoiceSelectors.innerHTML = '';
         speakers.forEach(speaker => {
             const html = `
-                <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
                     <span style="font-weight: bold; color: var(--primary); width: 100px;">${speaker}</span>
                     <select class="premium-input speaker-voice-select" data-speaker="${speaker}" style="flex: 1;">
                         ${buildVoiceOptions()}
