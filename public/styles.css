@@ -1065,3 +1065,10 @@ video::cue {
 .content-body.layout-full .upload-section video {
     max-height: 220px;
 }
+.content-body.layout-full .dubbing-section,
+.content-body.layout-full .translation-section,
+.content-body.layout-full .audio-result-container {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}

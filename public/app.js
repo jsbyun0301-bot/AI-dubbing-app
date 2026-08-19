@@ -118,8 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const body = $('step-content');
         if (body) {
             body.classList.toggle('studio-mode', hasScript);
-            // 2단계(번역)는 대사를 읽고 고치는 화면이라 전체 폭을 씁니다.
-            body.classList.toggle('layout-full', step === 2);
+            // 스크립트가 생성된 뒤에는 모든 단계에서 전체 폭 배치를 씁니다.
+            // 단계마다 좌우 배치가 바뀌면 화면이 흔들려 보이기 때문입니다.
+            body.classList.toggle('layout-full', hasScript);
         }
         if (mainHeader) mainHeader.textContent = STEP_TITLES[step] || STEP_TITLES[1];
 
