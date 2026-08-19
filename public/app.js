@@ -55,6 +55,47 @@ document.addEventListener('DOMContentLoaded', () => {
         progressCount.textContent = `${done} / ${total}`;
     }
 
+    // 서버 처리처럼 진행률을 알 수 없는 작업은
+    // 경과 시간과 흐르는 막대로 '멈춘 게 아니다'라는 신호만 줍니다.
+    let pendingTimer = null;
+
+    function startPendingProgress(label, hint) {
+        stopPendingProgress();
+        if (loadingText) loadingText.textContent = label;
+        if (progressTrack) {
+            progressTrack.classList.remove('hidden');
+            progressTrack.classList.add('indeterminate');
+            if (progressFill) progressFill.style.width = '';
+        }
+        if (!progressCount) return;
+        progressCount.classList.remove('hidden');
+
+        const startedAt = performance.now();
+        const tick = () => {
+            const sec = Math.floor((performance.now() - startedAt) / 1000);
+            const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+            const ss = String(sec % 60).padStart(2, '0');
+            progressCount.textContent = hint ? `${mm}:${ss} 경과 · ${hint}` : `${mm}:${ss} 경과`;
+        };
+        tick();
+        pendingTimer = setInterval(tick, 1000);
+    }
+
+    function stopPendingProgress() {
+        if (pendingTimer) {
+            clearInterval(pendingTimer);
+            pendingTimer = null;
+        }
+        if (progressTrack) {
+            progressTrack.classList.add('hidden');
+            progressTrack.classList.remove('indeterminate');
+        }
+        if (progressCount) {
+            progressCount.classList.add('hidden');
+            progressCount.textContent = '';
+        }
+    }
+
     // ── 오류 메시지 ────────────────────────────────────────────
     // 서버·외부 API의 원문 메시지를 사용자가 이해할 수 있는 안내로 바꿉니다.
     const ERROR_HINTS = [
@@ -1240,7 +1281,15 @@ ${text}
 
             const originalBtnText = btnDownloadVideo.innerHTML;
             btnDownloadVideo.disabled = true;
-            btnDownloadVideo.innerHTML = `<span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; margin-right: 8px; vertical-align: middle;"></span> 서버에서 영상 렌더링 중... (최대 수 분 소요)`;
+            btnDownloadVideo.innerHTML = `<span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; margin-right: 8px; vertical-align: middle;"></span> 병합 중...`;
+
+            // 병합은 서버에서 처리해 진행률을 알 수 없으므로 경과 시간만 보여줍니다
+            const videoSec = Number.isFinite(videoPreview?.duration) ? videoPreview.duration : 0;
+            const estimate = videoSec
+                ? `보통 ${Math.max(5, Math.round(videoSec * 0.6))}초 안팎 걸립니다`
+                : '영상 길이에 따라 시간이 걸립니다';
+            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+            startPendingProgress('영상에 더빙 음성을 입히고 있습니다', estimate);
 
             // Pre-calculate playbackRates identical to the sync logic
             const config = [];
@@ -1303,6 +1352,8 @@ ${text}
                 console.error('Muxing error:', err);
                 alert(friendlyError('영상 병합에 실패했습니다.', err));
             } finally {
+                stopPendingProgress();
+                if (loadingOverlay) loadingOverlay.classList.add('hidden');
                 btnDownloadVideo.disabled = false;
                 btnDownloadVideo.innerHTML = originalBtnText;
             }
