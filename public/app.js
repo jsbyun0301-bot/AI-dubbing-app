@@ -37,6 +37,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const step3Nav = document.getElementById('step-3-nav');
     const mainHeader = document.getElementById('main-header');
 
+    // ── 진행 표시 ────────────────────────────────────────────
+    const progressTrack = document.getElementById('progress-track');
+    const progressFill = document.getElementById('progress-fill');
+    const progressCount = document.getElementById('progress-count');
+
+    function setProgress(done, total) {
+        if (!progressTrack) return;
+        if (!total) {
+            progressTrack.classList.add('hidden');
+            progressCount.classList.add('hidden');
+            return;
+        }
+        progressTrack.classList.remove('hidden');
+        progressCount.classList.remove('hidden');
+        progressFill.style.width = `${Math.round((done / total) * 100)}%`;
+        progressCount.textContent = `${done} / ${total}`;
+    }
+
+    // ── 오류 메시지 ────────────────────────────────────────────
+    // 서버·외부 API의 원문 메시지를 사용자가 이해할 수 있는 안내로 바꿉니다.
+    const ERROR_HINTS = [
+        [/cannot find ffmpeg|ffmpeg/i,
+         '영상 병합 기능을 사용할 수 없는 상태입니다. 자동 재생이나 SRT 자막 내려받기를 이용해 주세요.'],
+        [/payload too large|413|too large/i,
+         '파일이 너무 큽니다. 2분 이내 영상으로 다시 시도해 주세요.'],
+        [/429|rate limit|한도/i,
+         '요청이 잠시 몰렸습니다. 잠시 후 다시 시도해 주세요.'],
+        [/401|unauthorized|api key|authentication/i,
+         'API 인증에 실패했습니다. 서버의 키 설정을 확인해 주세요.'],
+        [/quota|payment|credit|402/i,
+         'API 사용량이 한도에 도달했습니다. 잠시 후 또는 다음 달에 다시 시도해 주세요.'],
+        [/timeout|timed out|network|failed to fetch/i,
+         '서버 응답이 지연되고 있습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'],
+        [/오디오 트랙/i,
+         '영상에서 소리를 찾지 못했습니다. 음성이 포함된 파일인지 확인해 주세요.'],
+    ];
+
+    function friendlyError(prefix, error) {
+        const raw = (error && error.message) || String(error || '');
+        for (const [pattern, hint] of ERROR_HINTS) {
+            if (pattern.test(raw)) return `${prefix}\n\n${hint}`;
+        }
+        // 한글 안내가 이미 담긴 메시지는 그대로 전달
+        if (/[가-힣]/.test(raw)) return `${prefix}\n\n${raw}`;
+        return `${prefix}\n\n잠시 후 다시 시도해 주세요. 문제가 계속되면 다른 파일로 시도해 보세요.`;
+    }
+
     // ── 단계 전환 ────────────────────────────────────────────────
     // 1 스크립트 추출 · 2 번역 · 3 더빙 생성
     // 각 단계에서 필요한 영역만 보이도록 정리합니다.
@@ -188,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await extractScriptWithElevenLabs(currentVideoFile);
         } catch (error) {
             console.error('STT Error:', error);
-            alert(`스크립트 추출 중 오류가 발생했습니다: ${error.message}`);
+            alert(friendlyError('스크립트를 추출하지 못했습니다.', error));
             dialogueEditor.innerHTML = ''; // Clear skeletons on error
         } finally {
             loadingOverlay.classList.add('hidden');
@@ -405,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await translateWithGemini(scriptToTranslate, targetLanguage);
         } catch (error) {
             console.error('Translation Error:', error);
-            alert(`번역 중 오류가 발생했습니다: ${error.message}`);
+            alert(friendlyError('번역에 실패했습니다.', error));
         } finally {
             loadingOverlay.classList.add('hidden');
             // --- Restore Button State ---
@@ -856,7 +903,8 @@ ${text}
 
         try {
             for (let i = 0; i < lines.length; i++) {
-                 loadingText.textContent = `총 ${lines.length}개의 대사 중 ${i+1}번째 대사 합성 중...`;
+                 loadingText.textContent = '대사를 음성으로 만들고 있습니다';
+                 setProgress(i, lines.length);
                  const { speaker, text, start, end } = lines[i];
                  const voiceId = voiceMapping[speaker];
                  
@@ -875,18 +923,20 @@ ${text}
                      </div>
                  `;
                  playlistContainer.insertAdjacentHTML('beforeend', audioHtml);
+                 setProgress(i + 1, lines.length);
             }
-            
+
             setupSequentialPlayback();
             
         } catch (error) {
             console.error('TTS Error:', error);
-            alert(`오디오 생성 중 오류가 발생했습니다: ${error.message}`);
+            alert(friendlyError('음성을 만들지 못했습니다.', error));
         } finally {
             loadingOverlay.classList.add('hidden');
             btnGenerateDubbing.disabled = false;
             btnGenerateDubbing.innerHTML = originalBtnText;
             loadingText.textContent = '영상을 분석하고 있습니다...';
+            setProgress(0, 0);
         }
     });
 
@@ -1114,7 +1164,7 @@ ${text}
 
             } catch (err) {
                 console.error('Muxing error:', err);
-                alert(`영상 병합 중 오류가 발생했습니다: ${err.message}`);
+                alert(friendlyError('영상 병합에 실패했습니다.', err));
             } finally {
                 btnDownloadVideo.disabled = false;
                 btnDownloadVideo.innerHTML = originalBtnText;

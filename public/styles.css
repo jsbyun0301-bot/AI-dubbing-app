@@ -1020,3 +1020,25 @@ video::cue {
     overflow-y: auto;
     padding-right: 5px;
 }
+
+/* ── 진행 표시 ─────────────────────────────────── */
+.progress-track {
+    width: 240px;
+    height: 6px;
+    margin-top: 1rem;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #fff;
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+.progress-count {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.75);
+}
