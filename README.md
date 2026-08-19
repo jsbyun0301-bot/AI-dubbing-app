@@ -49,7 +49,7 @@ AI 더빙 서비스의 품질을 검증하는 일을 하면서, **각 단계가 
 | 구분 | 사용 기술 |
 |---|---|
 | 서버 | Node.js · Express |
-| 미디어 처리 | FFmpeg (fluent-ffmpeg) · Multer |
+| 미디어 처리 | FFmpeg (fluent-ffmpeg · ffmpeg-static) · Multer |
 | 음성 인식 / 합성 | ElevenLabs (Scribe v1 · Multilingual v2) |
 | 번역 | Google Gemini 2.5 Flash |
 | 프런트 | Vanilla JS · CSS (빌드 도구 없음) |
@@ -61,12 +61,7 @@ AI 더빙 서비스의 품질을 검증하는 일을 하면서, **각 단계가 
 
 ### 1. 사전 준비
 
-**FFmpeg**이 설치되어 있어야 합니다.
-
-```bash
-# macOS
-brew install ffmpeg
-```
+FFmpeg는 `ffmpeg-static` 패키지로 함께 설치되므로 별도 준비가 필요하지 않습니다.
 
 ### 2. 설치
 

@@ -6,6 +6,19 @@ const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 
+// 서버 환경에는 ffmpeg가 설치되어 있지 않으므로 번들된 바이너리를 사용합니다.
+let ffmpegAvailable = false;
+try {
+    const ffmpegPath = require('ffmpeg-static');
+    if (ffmpegPath) {
+        try { fs.chmodSync(ffmpegPath, 0o755); } catch (e) { /* 읽기 전용 FS면 무시 */ }
+        ffmpeg.setFfmpegPath(ffmpegPath);
+        ffmpegAvailable = true;
+    }
+} catch (e) {
+    console.warn('ffmpeg-static을 불러오지 못했습니다:', e.message);
+}
+
 const app = express();
 const port = 3000;
 
@@ -225,6 +238,11 @@ app.use((err, req, res, next) => {
 });
 
 app.post('/api/merge-video', upload.any(), (req, res) => {
+    if (!ffmpegAvailable) {
+        return res.status(503).json({
+            error: '영상 병합 기능을 사용할 수 없는 환경입니다. 자동 재생 또는 SRT 자막 내려받기를 이용해 주세요.'
+        });
+    }
     try {
         const configStr = req.body.config;
         if (!configStr) {
