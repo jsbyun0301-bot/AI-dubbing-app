@@ -84,6 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${prefix}\n\n잠시 후 다시 시도해 주세요. 문제가 계속되면 다른 파일로 시도해 보세요.`;
     }
 
+    // 결과 영역이 영상 바로 아래에 있어, 세로 배치에서는
+    // 합성 버튼보다 위에 놓이는 문제가 있었습니다. 순서를 바로잡습니다.
+    (function relocateResultSection() {
+        const result = document.getElementById('audio-result-container');
+        const dubbing = document.getElementById('dubbing-section');
+        if (result && dubbing && dubbing.parentNode) {
+            dubbing.parentNode.insertBefore(result, dubbing.nextSibling);
+        }
+    })();
+
     // ── 단계 전환 ────────────────────────────────────────────────
     // 1 스크립트 추출 · 2 번역 · 3 더빙 생성
     // 각 단계에서 필요한 영역만 보이도록 정리합니다.
@@ -932,6 +942,11 @@ ${text}
             }
 
             setupSequentialPlayback();
+
+            // 합성이 끝나면 결과가 바로 보이도록 이동
+            requestAnimationFrame(() => {
+                audioResultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
             
         } catch (error) {
             console.error('TTS Error:', error);
